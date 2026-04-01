@@ -1,0 +1,70 @@
+Project set up:
+in root folder, run:
+python -m venv venv
+venv\Scripts\activate
+pip install pandas numpy scikit-learn 
+
+Step 1:
+run:
+python initial_training/train_initial_model.py
+then:
+initial_model.pkl will be stored in the root folder
+copy the pkl file to hospital_A and hospital_B folders
+
+Step 2:
+hospital_A, hospital_B, central_server
+run:
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+deactivate
+
+Step 3:
+hospital_A
+uvicorn app:app --reload --port 8001
+uvicorn app2:app2 --reload --port 8002
+
+hospital_B
+uvicorn app:app --reload --port 8003
+uvicorn app2:app2 --reload --port 8004
+
+central_server
+uvicorn app:app --reload --port 8000
+
+pip freeze > requirements.txt
+
+LOGIC OF THE SIMULATION APP:
+HOSPITAL A & B:
+1.  Add patient data 
+2.  Train Local Model
+    Process:
+        kidney.csv 
+        ↓
+        train → initial_model.pkl  ✅ (base model)
+
+        hospital data (DB)
+        ↓
+        train_local()
+        ↓
+        hospitalB_model.pkl ✅ (updated model)
+3.  Push to Central
+    Uploads your hospital-trained model to central database with respective table (hospitala or hospitalb)
+
+CENTRAL SERVER:
+4.  Run aggregation
+    Process:
+        1. Connects to the same central database where hospitals pushed models
+        2. It checks both: hospitalA & hospitalB table
+        3. Takes most recent model from each hospital [SELECT model_data FROM {table} ORDER BY updated_at DESC LIMIT 1]
+        4. Each model has: coef_ → weights & intercept_ → bias
+            Average:    (0.8 + 0.6) / 2 = 0.7
+            Create global model
+            New global model uses 0.7
+            Remove old global model in aggregated table (TRUNCATE) and store the new one 
+            [At any point in time, the aggregated table contains the most recent global model]
+            
+
+HOSPITAL A & B:
+5. Pull from Central
+
+
