@@ -12,7 +12,7 @@ initial_model.pkl will be stored in the root folder
 copy the pkl file to hospital_A and hospital_B folders
 
 Step 2:
-hospital_A & hospital_B
+hospital_A, hospital_B, central_server
 run:
 python -m venv venv
 venv\Scripts\activate
@@ -28,5 +28,7 @@ hospital_B
 uvicorn app:app --reload --port 8003
 uvicorn app2:app2 --reload --port 8004
 
+central_server
+uvicorn app:app --reload --port 8000
 
 pip freeze > requirements.txt
