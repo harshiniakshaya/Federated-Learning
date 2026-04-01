@@ -1,0 +1,14 @@
+Project set up:
+in root folder, run:
+python -m venv venv
+venv\Scripts\activate
+pip install pandas numpy scikit-learn 
+
+Step 1:
+run:
+python initial_training/train_initial_model.py
+then:
+initial_model.pkl will be stored in the root folder
+
+pip install -r requirements.txt
+pip freeze > requirements.txt
