@@ -1,0 +1,49 @@
+install PostgreSQL extension
+create Azure Database for PostgreSQL flexible servers
+1. hospitala-db1 = Azure-HospitalA (name of the server in vs)
+2. hospitalb-db1 = Azure-HospitalB
+3. central-db1 = Central-DB
+
+connect the servers using the extension
+QUERY:
+1. CREATE A DB:
+CREATE DATABASE your_database_name;
+2. TO VIEW THE NAMES OF TABLES INSIDE A DB
+SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';
+3. TO VIEW THE COLUMN NAMES INSIDE A TABLES
+SELECT column_name FROM information_schema.columns WHERE table_name = 'patient_records';
+
+hospital_A server:
+DB = "hospitala"
+TABLE = "patient_records" (table creation handled by app.py)
+run this query:
+INSERT INTO patient_records (
+    age, bp, sg, al, su, rbc, pc, pcc, ba,
+    bgr, bu, sc, sod, pot, hemo, pcv, wc, rc,
+    htn, dm, cad, appet, pe, ane, classification
+)
+VALUES
+(52, 80, 1.02, 1, 0, 'normal', 'normal', 'notpresent', 'notpresent',
+ 121, 36, 1.2, 137, 4.4, 15.4, 44, 7800, 5.2,
+ 'yes', 'no', 'no', 'good', 'no', 'no', 'ckd'),
+
+(63, 70, 1.01, 3, 2, 'abnormal', 'abnormal', 'present', 'notpresent',
+ 157, 52, 2.4, 130, 5.1, 10.8, 32, 9400, 3.8,
+ 'yes', 'yes', 'no', 'poor', 'yes', 'yes', 'ckd'),
+
+(38, 60, 1.025, 0, 0, 'normal', 'normal', 'notpresent', 'notpresent',
+ 98, 25, 0.9, 142, 3.9, 16.2, 48, 6600, 5.6,
+ 'no', 'no', 'no', 'good', 'no', 'no', 'notckd'),
+
+(71, 90, 1.015, 4, 3, 'abnormal', 'abnormal', 'present', 'present',
+ 201, 87, 4.1, 124, 6.2, 8.3, 25, 11200, 3.1,
+ 'yes', 'yes', 'yes', 'poor', 'yes', 'yes', 'ckd'),
+
+(45, 70, 1.02, 0, 0, 'normal', 'normal', 'notpresent', 'notpresent',
+ 109, 31, 1.1, 139, 4.1, 14.7, 42, 7200, 5.0,
+ 'no', 'no', 'no', 'good', 'no', 'no', 'notckd');
+
+ SELECT * FROM patient_records;
+
+
+

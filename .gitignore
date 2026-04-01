@@ -1,1 +1,23 @@
-venv/
+# Virtual environments (any folder)
+**/venv/
+**/env/
+**/.venv/
+
+# Python cache (any folder)
+**/__pycache__/
+**/*.pyc
+
+# Environment files (any folder)
+**/.env
+**/*.env
+
+# Model files (any folder)
+**/*.pkl
+**/*.joblib
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
