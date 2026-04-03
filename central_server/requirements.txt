@@ -1,2 +1,7 @@
-psycopg2-binary==2.9.10
-numpy==1.25.2
+fastapi
+uvicorn
+pandas
+numpy
+scikit-learn
+psycopg2-binary
+python-dotenv
