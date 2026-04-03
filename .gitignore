@@ -12,8 +12,8 @@
 **/*.env
 
 # Model files (any folder)
-**/*.pkl
-**/*.joblib
+# **/*.pkl
+# **/*.joblib
 
 # Logs
 *.log
