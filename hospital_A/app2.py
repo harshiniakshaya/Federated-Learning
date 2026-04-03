@@ -1,24 +1,27 @@
 from fastapi import FastAPI
 import psycopg2
-import pickle
-from fastapi.middleware.cors import CORSMiddleware
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+from fastapi.middleware.cors import CORSMiddleware
 
+# Load env variables
 load_dotenv()
 
-app2 = FastAPI()
+# APP
+app = FastAPI()
 
-app2.add_middleware(
+app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # allow frontend
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# CENTRAL DB CONNECTION 
-# This connects ONLY to the Model Hub
+# BASE DIR (important for Render)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# CENTRAL DB CONFIG
 CENTRAL_DB_PARAMS = {
     "host": os.getenv("CENTRAL_DB_HOST"),
     "database": os.getenv("CENTRAL_DB_NAME"),
@@ -27,18 +30,44 @@ CENTRAL_DB_PARAMS = {
     "sslmode": "require"
 }
 
-HOSPITAL_ID = "hospitalA" # Change to "hospitalb" for the other node
+# CHANGE THIS PER SERVICE
+HOSPITAL_ID = "hospitalA"  # change to hospitalB for other service
 
-@app2.post("/push_to_central")
+
+# SAFE DB CONNECTION
+def get_central_connection():
+    try:
+        return psycopg2.connect(**CENTRAL_DB_PARAMS)
+    except Exception as e:
+        print("Central DB connection error:", e)
+        return None
+
+
+# HEALTH CHECK
+@app.get("/")
+def health():
+    return {"status": "Sync service running"}
+
+
+# PUSH LOCAL MODEL → CENTRAL
+@app.post("/push_to_central")
 def push_to_central():
     try:
-        with open(f"{HOSPITAL_ID}_model.pkl", "rb") as f:
+        model_path = os.path.join(BASE_DIR, f"{HOSPITAL_ID}_model.pkl")
+
+        if not os.path.exists(model_path):
+            return {"error": "Local model not found. Run /train_local first."}
+
+        with open(model_path, "rb") as f:
             model_bytes = f.read()
 
-        conn = psycopg2.connect(**CENTRAL_DB_PARAMS)
+        conn = get_central_connection()
+        if conn is None:
+            return {"error": "Central DB not connected"}
+
         cursor = conn.cursor()
 
-        # Create table if it doesn't exist
+        # Create table safely
         cursor.execute(f"""
             CREATE TABLE IF NOT EXISTS {HOSPITAL_ID} (
                 id SERIAL PRIMARY KEY,
@@ -59,32 +88,52 @@ def push_to_central():
 
         return {"status": "Local model pushed to Central DB"}
 
-    except FileNotFoundError:
-        return {"error": "Local model file not found. Run /train_local in app.py first."}
-
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": "Push failed",
+            "details": str(e)
+        }
 
-@app2.get("/pull_from_central")
+
+# PULL GLOBAL MODEL ← CENTRAL
+@app.get("/pull_from_central")
 def pull_from_central():
-    """Downloads the aggregated global model to initial_model.pkl"""
     try:
-        conn = psycopg2.connect(**CENTRAL_DB_PARAMS)
-        cursor = conn.cursor()
-        
-        # Get the one record from the aggregated table
-        cursor.execute("SELECT model_data FROM aggregated ORDER BY updated_at DESC LIMIT 1")
-        row = cursor.fetchone()
-        
-        if not row:
-            return {"error": "Aggregated model not found in central-db"}
+        conn = get_central_connection()
+        if conn is None:
+            return {"error": "Central DB not connected"}
 
-        # Overwrite the starting model for app.py
-        with open("initial_model.pkl", "wb") as f:
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT model_data 
+            FROM aggregated 
+            ORDER BY updated_at DESC 
+            LIMIT 1
+        """)
+
+        row = cursor.fetchone()
+
+        if not row:
+            cursor.close()
+            conn.close()
+            return {"error": "No aggregated model found"}
+
+        save_path = os.path.join(BASE_DIR, "initial_model.pkl")
+
+        with open(save_path, "wb") as f:
             f.write(row[0])
-            
+
         cursor.close()
         conn.close()
-        return {"status": "Global model pulled. app.py is now ready for a new training round."}
+
+        return {
+            "status": "Global model pulled successfully",
+            "message": "Ready for next training round"
+        }
+
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": "Pull failed",
+            "details": str(e)
+        }
