@@ -3,6 +3,9 @@ import psycopg2
 import os
 from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import Body
+import pickle
+import pandas as pd
 
 # Load env variables
 load_dotenv()
@@ -135,5 +138,84 @@ def pull_from_central():
     except Exception as e:
         return {
             "error": "Pull failed",
+            "details": str(e)
+        }
+
+
+# GLOBAL VARIABLES
+artifacts = None
+model = None
+encoders = None
+feature_names = None
+
+
+def load_model():
+    global artifacts, model, encoders, feature_names
+    try:
+        if artifacts is None:
+            model_path = os.path.join(BASE_DIR, "initial_model.pkl")
+
+            with open(model_path, "rb") as f:
+                artifacts = pickle.load(f)
+
+            model = artifacts["model"]
+            encoders = artifacts["encoders"]
+            feature_names = artifacts["feature_names"]
+
+        return True
+    except Exception as e:
+        print("Model load error:", e)
+        return False
+
+
+# PREDICT ENDPOINT
+@app.post("/predict")
+def predict(data: dict = Body(...)):
+
+    if not load_model():
+        return {"error": "Model not loaded"}
+
+    try:
+        df = pd.DataFrame([data])
+
+        # Numeric columns
+        numeric_cols = [
+            'age','bp','sg','al','su','bgr','bu','sc',
+            'sod','pot','hemo','pcv','wc','rc'
+        ]
+
+        for col in numeric_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+
+        df[numeric_cols] = df[numeric_cols].fillna(df[numeric_cols].median())
+
+        # Categorical columns
+        categorical_cols = [
+            'rbc','pc','pcc','ba','htn','dm',
+            'cad','appet','pe','ane'
+        ]
+
+        for col in categorical_cols:
+            df[col] = encoders[col].transform(df[col].astype(str))
+
+        # Ensure column order
+        df = df[feature_names]
+
+        # Predict
+        prediction = model.predict(df)[0]
+
+        # Optional: decode output if encoder used
+        try:
+            prediction = encoders["classification"].inverse_transform([prediction])[0]
+        except:
+            pass
+
+        return {
+            "prediction": prediction
+        }
+
+    except Exception as e:
+        return {
+            "error": "Prediction failed",
             "details": str(e)
         }
