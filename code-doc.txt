@@ -22,7 +22,7 @@ deactivate
 Step 3:
 hospital_A
 uvicorn app:app --reload --port 8001
-uvicorn app2:app2 --reload --port 8002
+uvicorn app2:app --reload --port 8002
 
 hospital_B
 uvicorn app:app --reload --port 8003
