@@ -142,6 +142,41 @@ def add_patient(data: dict = Body(...)):
             "details": str(e)
         }
 
+# VIEW ALL PATIENT RECORDS
+@app.get("/patients")
+def get_patients():
+
+    conn = get_connection()
+    if conn is None:
+        return {"error": "Database not connected"}
+
+    try:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM patient_records")
+        rows = cursor.fetchall()
+
+        # Get column names
+        col_names = [desc[0] for desc in cursor.description]
+
+        # Convert to list of dicts
+        data = []
+        for row in rows:
+            data.append(dict(zip(col_names, row)))
+
+        cursor.close()
+        conn.close()
+
+        return {
+            "count": len(data),
+            "patients": data
+        }
+
+    except Exception as e:
+        return {
+            "error": "Failed to fetch patient records",
+            "details": str(e)
+        }
 
 # LOCAL TRAINING
 @app.post("/train_local")
